@@ -1,17 +1,12 @@
-import { Text, View, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
+import { useEffect } from "react";
 
 export default function Index() {
-  return (
-    <View style={styles.container}>
-      <Text>Wlcome Sabir</Text>
-    </View>
-  );
-}
+  const router = useRouter();
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
+  useEffect(() => {
+    router.push("/(tabs)/home");
+  }, []);
+
+  return null;
+}
