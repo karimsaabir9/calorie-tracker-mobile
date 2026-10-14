@@ -2,6 +2,10 @@ import { API_URL } from "../constants/config";
 import axios, { AxiosError, AxiosRequestHeaders } from "axios";
 import * as SecureStore from "expo-secure-store";
 
+// Fail fast instead of hanging forever when the device can't reach the API
+// (e.g. flaky connectivity). Applies to every request: login, getMe, etc.
+axios.defaults.timeout = 15000; // 15s
+
 export interface RegisterData {
   name: string;
   email: string;
@@ -136,10 +140,13 @@ export const authAPI = {
       }
       return data;
     } catch (error) {
-      throw (
-        (error as AxiosError<{ message: string }>)?.response?.data?.message ||
-        "An unknown error occurred"
-      );
+      const e = error as AxiosError<{ message: string }>;
+      // Server replied with an error (e.g. wrong credentials)
+      if (e.response?.data?.message) throw e.response.data.message;
+      // No response = couldn't reach the server (offline / timeout)
+      if (e.code === "ECONNABORTED")
+        throw "Request timed out. Check your internet connection.";
+      throw "Couldn't reach the server. Check your internet connection.";
     }
   },
 

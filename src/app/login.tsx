@@ -41,7 +41,11 @@ const Login = () => {
       router.replace("/(tabs)/home");
     } catch (error) {
       console.error("Login error:", error);
-      Alert.alert("Error", "Email or password is incorrect");
+      const message =
+        typeof error === "string"
+          ? error
+          : "Couldn't reach the server. Check your internet connection and try again.";
+      Alert.alert("Login failed", message);
       setPassword("");
     }
   };
