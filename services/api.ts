@@ -233,28 +233,11 @@ export const foodAPI = {
 
   analyzeFood: async (formData: FormData): Promise<FoodAnalysis> => {
     try {
-      // @ts-ignore
-
-      // const headers = await getAuthHeaders();
-      // delete headers["Content-type"];
-      
-      // console.log("API URL", API_URL);
-
-      // const url = `${API_URL}/food/analyze`;
-      // const { data } = await axios.post<FoodAnalysis>(url, formData, {
-      //   headers,
-      // });
-
-      // console.log("data in analyzeFood", data);
-
-      // return data;
-
       const token = await SecureStore.getItemAsync("userToken");
 
       const url = `${API_URL}/food/analyze`;
 
-
-         // Use fetch API for FormData in React Native - it handles FormData more reliably
+      // const headers: HeadersInit = {
     const headers: HeadersInit = {};
     if (token) {
       headers.Authorization = `Bearer ${token}`;
