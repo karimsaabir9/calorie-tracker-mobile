@@ -1,5 +1,5 @@
 import { API_URL } from "../constants/config";
-import axios, { AxiosError, AxiosRequestHeaders } from "axios";
+import axios, { AxiosError } from "axios";
 import * as SecureStore from "expo-secure-store";
 
 // Fail fast instead of hanging forever when the device can't reach the API
@@ -237,56 +237,33 @@ export const foodAPI = {
 
       const url = `${API_URL}/food/analyze`;
 
-      // const headers: HeadersInit = {
-    const headers: HeadersInit = {};
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
+      // Use axios (XMLHttpRequest under the hood on RN) so the React Native
+      // `{ uri, name, type }` FormData part is supported. The global `fetch`
+      // is Expo's WinterCG fetch, which rejects uri-based parts with
+      // "Unsupported FormDataPart implementation".
+      const headers: Record<string, string> = {
+        "Content-Type": "multipart/form-data",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
 
-     
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 seconds or 2 minute timeout
-
-
-    try {
-      
-      const response = await fetch(url, {
-        method: "POST",
+      const { data } = await axios.post<FoodAnalysis>(url, formData, {
         headers,
-        body: formData,
-        signal: controller.signal,
+        timeout: 120000, // 2 min — food analysis can be slow
       });
 
-      clearTimeout(timeoutId);
-
-
-          
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || `Server error: ${response.status} ${response.statusText}`
-        );
-      }
-      
-      const data = await response.json();
       console.log("data in analyzeFood", data);
-      
-      return data as FoodAnalysis;
 
-    } catch (fetchError: any) {
-      clearTimeout(timeoutId);
-      
-      if (fetchError.name === "AbortError") {
-        throw new Error("Request timeout: The server took too long to respond");
-      }
-      
-      throw fetchError;
-    }
+      return data;
     } catch (error) {
       console.error("Error analyzing food:", error);
+      const axiosError = error as AxiosError<{ message: string }>;
+      if (axiosError.code === "ECONNABORTED") {
+        throw new Error(
+          "Request timeout: The server took too long to respond"
+        );
+      }
       throw (
-        (error as AxiosError<{ message: string }>)?.response?.data?.message ||
-        "An unknown error occurred"
+        axiosError.response?.data?.message || "An unknown error occurred"
       );
     }
   },
