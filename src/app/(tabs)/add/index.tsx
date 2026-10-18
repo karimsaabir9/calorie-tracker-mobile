@@ -8,8 +8,8 @@ import {
   TouchableOpacity,
   Image,
   Alert,
-  // TextInput,
-  // ActivityIndicator,
+  TextInput,
+  ActivityIndicator,
 } from "react-native";
 import React, { useState } from "react";
 import * as ImagePicker from "expo-image-picker";
@@ -28,7 +28,8 @@ import {
 } from "../../../../constants/themes";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
-// import FoodPreviewModal from "@/components/FoodPreviewModal";
+import FoodPreviewModal from "../../../../components/FoodPreviewModal";
+
 
 const Add = () => {
   const [foodName, setFoodName] = useState("");
@@ -51,7 +52,7 @@ const Add = () => {
       Alert.alert(
         "Permission Required",
         "we need your permission to access your camera and media library",
-        [{ text: "OK" }]
+        [{ text: "OK" }],
       );
       return false;
     }
@@ -86,7 +87,6 @@ const Add = () => {
     }
   };
 
-
   const showImagePickerOptions = () => {
     Alert.alert(
       "Select Image Source",
@@ -107,8 +107,114 @@ const Add = () => {
       ],
       {
         cancelable: true,
-      }
+      },
     );
+  };
+
+  const handleAccept = async () => {
+    if (!previewData) return;
+
+    try {
+      // save food to database
+
+      await saveMutation.mutateAsync(previewData);
+
+      // clear form data
+
+      setShowPreview(false);
+      setImage(null);
+      setFoodName("");
+      setDescription("");
+      setPreviewData(null);
+
+      Alert.alert("Success", `${previewData.foodName} added to your diary`, [
+        { text: "OK" },
+      ]);
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "Failed to add food to your diary", [
+        { text: "OK" },
+      ]);
+    }
+  };
+
+
+  const handleDecline = async () => {
+    // discard food from database
+    if (!previewData) return;
+
+    try {
+      await discardMutation.mutateAsync(previewData.storageKey);
+
+      // clear form data
+      setShowPreview(false);
+      setPreviewData(null);
+    } catch (error) {
+      console.error("error in handleDecline", error);
+
+      // clear form data
+      setShowPreview(false);
+      setPreviewData(null);
+    }
+  };
+
+
+  const handleSubmit = async () => {
+    if (!image) {
+      Alert.alert("Error", "Please select an image");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+       // Extract file extension from image uri properly
+    let fileExtension = "jpg";
+    let mimeType = "image/jpeg";
+    
+    // Try to get extension from URI
+    const uriMatch = image.uri.match(/\.([a-zA-Z0-9]+)(?:\?|$)/);
+    if (uriMatch) {
+      fileExtension = uriMatch[1].toLowerCase();
+    }
+
+   // Set proper MIME type based on extension
+    switch (fileExtension) {
+      case "jpg":
+      case "jpeg":
+        mimeType = "image/jpeg";
+        break;
+      case "png":
+        mimeType = "image/png";
+        break;
+      case "gif":
+        mimeType = "image/gif";
+        break;
+      case "webp":
+        mimeType = "image/webp";
+        break;
+      default:
+        mimeType = "image/jpeg"; // default to jpeg
+        fileExtension = "jpg";
+    }
+     // Append image to form data
+    // @ts-ignore 
+    formData.append("image", {
+      uri: image.uri,
+      name: `image.${fileExtension}`,
+      type: mimeType,
+    } as any);
+      
+
+      // mutation to analyze food
+
+      const result = await analyzeMutation.mutateAsync(formData);
+
+      setPreviewData(result);
+      setShowPreview(true);
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "Failed to analyze food");
+    }
   };
 
   return (
@@ -154,9 +260,8 @@ const Add = () => {
             </View>
           )}
 
-
-    {/* Take Photo / Select Image Button */}
-    <TouchableOpacity
+          {/* Take Photo / Select Image Button */}
+          <TouchableOpacity
             onPress={showImagePickerOptions}
             activeOpacity={0.7}
             style={[
@@ -177,13 +282,75 @@ const Add = () => {
             </Text>
           </TouchableOpacity>
 
+          {/* Food Name (Optional - will be auto-filled by AI) */}
+          <Text style={styles.label}>
+            Food Name (Optional - AI will detect)
+          </Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              placeholder="e.g., Chicken Salad (optional)"
+              value={foodName}
+              onChangeText={setFoodName}
+              placeholderTextColor={colors.textTertiary}
+              style={styles.input}
+              editable={!analyzeMutation.isPending}
+            />
+          </View>
 
+          {/* Description (Optional) */}
+          <Text style={styles.label}>Description (Optional)</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              placeholder="Describe your meal..."
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              placeholderTextColor={colors.textTertiary}
+              style={styles.textArea}
+              editable={!analyzeMutation.isPending}
+            />
+          </View>
 
-
-
-
+          {/* Submit Button */}
+          {/* Analyze Button */}
+          <TouchableOpacity
+            onPress={handleSubmit}
+            activeOpacity={0.8}
+            style={[
+              styles.submitButton,
+              (analyzeMutation.isPending || !image) &&
+                styles.submitButtonDisabled,
+            ]}
+            disabled={analyzeMutation.isPending || !image}
+          >
+            {analyzeMutation.isPending ? (
+              <>
+                <ActivityIndicator
+                  color={colors.white}
+                  size="small"
+                  style={styles.loader}
+                />
+                <Text style={styles.submitButtonText}>Analyzing Food...</Text>
+              </>
+            ) : (
+              <Text style={styles.submitButtonText}>Analyze Food</Text>
+            )}
+          </TouchableOpacity>
         </View>
       </ScrollView>
+
+
+      {/* Food Analysis Result Modal */}
+      <FoodPreviewModal
+        visible={showPreview}
+        foodData={previewData}
+        isLoading={analyzeMutation.isPending}
+        onAccept={handleAccept}
+        onDecline={handleDecline}
+      />
+
     </KeyboardAvoidingView>
   );
 };
