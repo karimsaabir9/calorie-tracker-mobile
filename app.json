@@ -2,6 +2,7 @@
   "expo": {
     "name": "Calorie Tracker",
     "slug": "calorie-tracker",
+    "owner": "karimsaabir9",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -16,7 +17,10 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.mobile"
+      "package": "com.anonymous.mobile",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -33,12 +37,12 @@
         }
       ],
       [
-      "expo-secure-store",
-      {
-        "configureAndroidBackup": true,
-        "faceIDPermission": "Allow $(PRODUCT_NAME) to access your Face ID biometric data."
-      }
-    ],
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true,
+          "faceIDPermission": "Allow $(PRODUCT_NAME) to access your Face ID biometric data."
+        }
+      ],
       [
         "expo-image-picker",
         {
@@ -49,6 +53,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3798f2bf-80ec-4c33-822f-e7f944ee6b8e"
+      }
     }
   }
 }
